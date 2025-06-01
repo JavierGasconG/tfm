@@ -1,0 +1,460 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>msTools.data_manager &mdash; documentación de MS_Activity_Movement - 00.00.02</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=fd3f3429" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5bd19b6b"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/translations.js?v=d190bf04"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            MS_Activity_Movement
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">DPC_2024</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">MS_Activity_Movement</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">msTools.data_manager</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para msTools.data_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">influxdb_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">InfluxDBClient</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">psycopg2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">msTools.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CodeID</span><span class="p">,</span> <span class="n">ActivityLeg</span><span class="p">,</span> <span class="n">ActivityAll</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">msGait.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">EffectiveMovement</span><span class="p">,</span> <span class="n">ActivitySegment</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+
+
+<div class="viewcode-block" id="DataManager">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager">[documentos]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DataManager</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span><span class="o">-&gt;</span><span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inicializa el DataManager con las conexiones a InfluxDB y PostgreSQL.</span>
+<span class="sd">        </span>
+<span class="sd">        :param config_path: Ruta del archivo YAML con la configuración.</span>
+<span class="sd">        :type config_path: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span>
+
+        <span class="c1"># Configurar PostgreSQL</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect_postgresql</span><span class="p">()</span>
+
+        <span class="c1"># Configurar InfluxDB</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">influxdb_client</span> <span class="o">=</span> <span class="n">InfluxDBClient</span><span class="p">(</span>
+            <span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;influxdb&quot;</span><span class="p">][</span><span class="s2">&quot;url&quot;</span><span class="p">],</span>
+            <span class="n">token</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;influxdb&quot;</span><span class="p">][</span><span class="s2">&quot;token&quot;</span><span class="p">],</span>
+            <span class="n">org</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;influxdb&quot;</span><span class="p">][</span><span class="s2">&quot;org&quot;</span><span class="p">],</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;influxdb&quot;</span><span class="p">][</span><span class="s2">&quot;timeout&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;influxdb&quot;</span><span class="p">][</span><span class="s2">&quot;bucket&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">measurement</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;influxdb&#39;</span><span class="p">][</span><span class="s1">&#39;measurement&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_influxdb</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_pg</span><span class="p">()</span>
+
+<div class="viewcode-block" id="DataManager.load_config">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.load_config">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Carga la configuración desde un archivo YAML.</span>
+
+<span class="sd">        :param config_path: Ruta al archivo YAML.</span>
+<span class="sd">        :type config_path: str</span>
+<span class="sd">        :return: Diccionario con la configuración.</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DataManager._connect_postgresql">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager._connect_postgresql">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_connect_postgresql</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">connection</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Establece una conexión con PostgreSQL.</span>
+
+<span class="sd">        :return: Objeto de conexión de PostgreSQL.</span>
+<span class="sd">        :rtype: object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+                <span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;postgresql&quot;</span><span class="p">][</span><span class="s2">&quot;host&quot;</span><span class="p">],</span>
+                <span class="n">database</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;postgresql&quot;</span><span class="p">][</span><span class="s2">&quot;database&quot;</span><span class="p">],</span>
+                <span class="n">user</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;postgresql&quot;</span><span class="p">][</span><span class="s2">&quot;user&quot;</span><span class="p">],</span>
+                <span class="n">password</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;postgresql&quot;</span><span class="p">][</span><span class="s2">&quot;password&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">OperationalError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error al conectar con PostgreSQL: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+
+<div class="viewcode-block" id="DataManager.close_pg">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.close_pg">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close_pg</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="DataManager.close_influxdb">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.close_influxdb">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close_influxdb</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">influxdb_client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="DataManager.get_influx_client">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.get_influx_client">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_influx_client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InfluxDBClient</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Devuelve el cliente de InfluxDB.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: Objeto cliente de InfluxDB.</span>
+<span class="sd">        :rtype: object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">influxdb_client</span></div>
+
+
+<div class="viewcode-block" id="DataManager.check_and_create_tables">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.check_and_create_tables">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_and_create_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sql_file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Comprueba si las tablas necesarias existen en PostgreSQL y las crea si no existen.</span>
+
+<span class="sd">        :param sql_file_path: Ruta al archivo SQL con las definiciones de las tablas.</span>
+<span class="sd">        :type sql_file_path: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">required_tables</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;codeids&quot;</span><span class="p">,</span> <span class="s2">&quot;effective_movement&quot;</span><span class="p">,</span> <span class="s2">&quot;activity_leg&quot;</span><span class="p">,</span> <span class="s2">&quot;activity_all&quot;</span>
+            <span class="p">]</span>  <span class="c1"># Tablas actualizadas</span>
+
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">table_name</span> <span class="ow">in</span> <span class="n">required_tables</span><span class="p">:</span>
+                    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                        SELECT EXISTS (</span>
+<span class="s2">                            SELECT FROM information_schema.tables </span>
+<span class="s2">                            WHERE table_name = &#39;</span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">&#39;</span>
+<span class="s2">                        );</span>
+<span class="s2">                    &quot;&quot;&quot;</span><span class="p">)</span>
+                    <span class="n">exists</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">exists</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Creando tabla &#39;</span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">&#39; desde </span><span class="si">{</span><span class="n">sql_file_path</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+                        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">sql_file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sql_file</span><span class="p">:</span>
+                            <span class="n">sql_script</span> <span class="o">=</span> <span class="n">sql_file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql_script</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tabla &#39;</span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">&#39; ya existe.&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error al verificar/crear tablas: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+
+<div class="viewcode-block" id="DataManager.get_codeids_in_range">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.get_codeids_in_range">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_codeids_in_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_datetime</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">end_datetime</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene los CodeIDs únicos en un rango de fechas desde InfluxDB.</span>
+<span class="sd">        </span>
+<span class="sd">        :param start_datetime: Fecha y hora de inicio en formato string.</span>
+<span class="sd">        :param end_datetime: Fecha y hora de fin en formato string.</span>
+<span class="sd">        :return: Lista de CodeIDs únicos.</span>
+<span class="sd">        :rtype: list[str]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Verificar zona horaria antes de localización/conversión</span>
+            <span class="n">start_datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">start_datetime</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">start_datetime</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">start_datetime</span> <span class="o">=</span> <span class="n">start_datetime</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span>
+            <span class="n">start_datetime</span> <span class="o">=</span> <span class="n">start_datetime</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;+00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;Z&quot;</span><span class="p">)</span>
+
+            <span class="n">end_datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">end_datetime</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">end_datetime</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">end_datetime</span> <span class="o">=</span> <span class="n">end_datetime</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span>
+            <span class="n">end_datetime</span> <span class="o">=</span> <span class="n">end_datetime</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;+00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;Z&quot;</span><span class="p">)</span>
+
+            <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">            from(bucket: &quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="si">}</span><span class="s1">&quot;)</span>
+<span class="s1">                |&gt; range(start: </span><span class="si">{</span><span class="n">start_datetime</span><span class="si">}</span><span class="s1">, stop: </span><span class="si">{</span><span class="n">end_datetime</span><span class="si">}</span><span class="s1">)</span>
+<span class="s1">                |&gt; filter(fn: (r) =&gt; r._measurement == &quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">measurement</span><span class="si">}</span><span class="s1">&quot;)</span>
+<span class="s1">                |&gt; keep(columns: [&quot;CodeID&quot;])</span>
+<span class="s1">                |&gt; distinct()</span>
+<span class="s1">            &#39;&#39;&#39;</span>
+            
+            <span class="n">query_api</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">influxdb_client</span><span class="o">.</span><span class="n">query_api</span><span class="p">()</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">query_api</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">org</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;influxdb&#39;</span><span class="p">][</span><span class="s1">&#39;org&#39;</span><span class="p">])</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;CodeID&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">result</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">records</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error al obtener CodeIDs de InfluxDB: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span></div>
+
+        
+
+<div class="viewcode-block" id="DataManager.fetch_data">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.fetch_data">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Ejecuta una consulta SQL en PostgreSQL y devuelve los resultados como un DataFrame.</span>
+
+<span class="sd">        :param query: Consulta SQL a ejecutar.</span>
+<span class="sd">        :return: DataFrame con los resultados de la consulta.</span>
+<span class="sd">        :rtype: pd.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+                <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">desc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span><span class="p">]</span>  <span class="c1"># Obtener nombres de columnas</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>  <span class="c1"># Obtener datos</span>
+                <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error al ejecutar la consulta SQL: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+
+
+<div class="viewcode-block" id="DataManager.store_codeid">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.store_codeid">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">store_codeid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">codeid</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Almacena un CodeID único en la tabla codeids y devuelve su ID.</span>
+
+<span class="sd">        :param codeid: El CodeID a almacenar.</span>
+<span class="sd">        :return: ID del CodeID en la tabla.</span>
+<span class="sd">        :rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Validar el CodeID usando Pydantic</span>
+            <span class="n">validated_codeid</span> <span class="o">=</span> <span class="n">CodeID</span><span class="p">(</span><span class="n">codeid</span><span class="o">=</span><span class="n">codeid</span><span class="p">)</span>
+
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="c1"># Intentar insertar el codeid</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                    <span class="s2">&quot;INSERT INTO codeids (codeid) VALUES (</span><span class="si">%s</span><span class="s2">) ON CONFLICT (codeid) DO NOTHING RETURNING id;&quot;</span><span class="p">,</span>
+                    <span class="p">(</span><span class="n">validated_codeid</span><span class="o">.</span><span class="n">codeid</span><span class="p">,)</span>
+                <span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Devuelve el ID recién creado</span>
+                <span class="c1"># Si ya existe, buscar el ID</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT id FROM codeids WHERE codeid = </span><span class="si">%s</span><span class="s2">;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">validated_codeid</span><span class="o">.</span><span class="n">codeid</span><span class="p">,))</span>
+                <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Devuelve el ID existente</span>
+        <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error de validación al almacenar CodeID: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error al almacenar CodeID: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+
+<div class="viewcode-block" id="DataManager.transform_activityleg">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.transform_activityleg">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">transform_activityleg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transforms a pandas DataFrame moving time columns to ISO string,</span>
+<span class="sd">        and CodeID to codeid_id by quering the codeids table.</span>
+
+<span class="sd">        :param data:  Activity_Leg pandas.</span>
+<span class="sd">        :type data: pd.DataFrame</span>
+<span class="sd">        :return: Updated Activity Leg pandas</span>
+<span class="sd">        :rtype: pd.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">get_codeid_id_from_db</span><span class="p">(</span><span class="n">codeid</span><span class="p">:</span><span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            find the codeid_id by quering the codeids table matching CodeID.</span>
+
+<span class="sd">            :param codeid:  CodeID string</span>
+<span class="sd">            :type data: str</span>
+<span class="sd">            :return: Id in table codeids</span>
+<span class="sd">            :rtype: int</span>
+<span class="sd">            &quot;&quot;&quot;</span>        
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="c1"># Si ya existe, buscar el ID</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT id FROM codeids WHERE codeid = </span><span class="si">%s</span><span class="s2">;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">codeid</span><span class="p">,))</span>
+                <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Devuelve el ID existente</span>
+        <span class="c1">#</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;start_time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;time_from&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">isoformat</span><span class="p">())</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;end_time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;time_until&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">isoformat</span><span class="p">())</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;codeid_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;CodeID&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">get_codeid_id_from_db</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;time_until&#39;</span><span class="p">]</span><span class="o">-</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;time_from&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span>
+        <span class="n">lnom</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;codeid_id&#39;</span><span class="p">,</span><span class="s1">&#39;foot&#39;</span><span class="p">,</span><span class="s1">&#39;start_time&#39;</span><span class="p">,</span><span class="s1">&#39;end_time&#39;</span><span class="p">,</span><span class="s1">&#39;duration&#39;</span><span class="p">,</span><span class="s1">&#39;mac&#39;</span><span class="p">,</span>\
+                <span class="s1">&#39;device_name&#39;</span><span class="p">,</span><span class="s1">&#39;total_value&#39;</span><span class="p">]</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;DeviceName&#39;</span><span class="p">:</span><span class="s1">&#39;device_name&#39;</span><span class="p">,</span><span class="s1">&#39;Foot&#39;</span><span class="p">:</span><span class="s1">&#39;foot&#39;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">ddat</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;time_from&#39;</span><span class="p">,</span><span class="s1">&#39;time_until&#39;</span><span class="p">,</span><span class="s1">&#39;CodeID&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">ddat</span><span class="p">[</span><span class="n">lnom</span><span class="p">]</span></div>
+
+        
+<div class="viewcode-block" id="DataManager.store_data">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.store_data">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">store_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Almacena datos en una tabla específica en PostgreSQL, validando </span>
+<span class="sd">                los datos con pydantic.</span>
+
+<span class="sd">        :param table_name: Nombre de la tabla.</span>
+<span class="sd">        :param data: DataFrame con los datos a almacenar.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No hay datos para guardar en </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Guardando datos en la tabla </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>  <span class="c1"># Confirmación de inicio</span>
+
+            <span class="c1"># Convertir columnas a cadenas si es necesario</span>
+            <span class="k">if</span> <span class="s2">&quot;start_time&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s2">&quot;end_time&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">[</span><span class="s2">&quot;end_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;end_time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+
+            <span class="c1"># Validar los datos</span>
+            <span class="n">validated_rows</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">table_name</span> <span class="o">==</span> <span class="s2">&quot;activity_leg&quot;</span><span class="p">:</span>
+                    <span class="n">validated_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ActivityLeg</span><span class="p">(</span><span class="o">**</span><span class="n">row</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span><span class="o">.</span><span class="n">dict</span><span class="p">())</span>
+                <span class="k">elif</span> <span class="n">table_name</span> <span class="o">==</span> <span class="s2">&quot;effective_movement&quot;</span><span class="p">:</span>
+                    <span class="n">validated_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">EffectiveMovement</span><span class="p">(</span><span class="o">**</span><span class="n">row</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span><span class="o">.</span><span class="n">dict</span><span class="p">())</span>
+                <span class="k">elif</span> <span class="n">table_name</span> <span class="o">==</span> <span class="s2">&quot;activity_all&quot;</span><span class="p">:</span>
+                    <span class="n">validated_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ActivityAll</span><span class="p">(</span><span class="o">**</span><span class="n">row</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span><span class="o">.</span><span class="n">dict</span><span class="p">())</span>
+                <span class="k">elif</span> <span class="n">table_name</span> <span class="o">==</span> <span class="s2">&quot;fullref_sensor_codeid&quot;</span><span class="p">:</span>
+                    <span class="n">validated_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ActivitySegment</span><span class="p">(</span><span class="o">**</span><span class="n">row</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span><span class="o">.</span><span class="n">dict</span><span class="p">())</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tabla no reconocida: </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Guardar en PostgreSQL</span>
+            <span class="n">inserted_ids</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># List of inserted activity_leg IDs</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">validated_rows</span><span class="p">:</span>
+                    <span class="n">columns</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+                    <span class="n">placeholders</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">))</span>
+                    <span class="n">sql</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;INSERT INTO </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">columns</span><span class="si">}</span><span class="s2">) VALUES &quot;</span> <span class="o">+</span> \
+                          <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">placeholders</span><span class="si">}</span><span class="s2">) RETURNING id&quot;</span>
+                    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+                    <span class="n">inserted_id</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Obtaining the inserted ID</span>
+                    <span class="n">inserted_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inserted_id</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Datos guardados correctamente en la tabla </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">inserted_ids</span>
+        <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error de validación en </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error al guardar los datos en </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DataManager.get_real_codeid">
+<a class="viewcode-back" href="../../msTools.html#msTools.data_manager.DataManager.get_real_codeid">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_real_codeid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">codeid_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene el verdadero CodeID desde PostgreSQL dado un ID de la tabla codeids.</span>
+
+<span class="sd">        :param codeid_id: ID del CodeID en la tabla codeids.</span>
+<span class="sd">        :return: El verdadero CodeID como string.</span>
+<span class="sd">        :rtype: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;SELECT codeid FROM codeids WHERE id = </span><span class="si">%s</span><span class="s2">;&quot;</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="p">(</span><span class="n">codeid_id</span><span class="p">,))</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Devuelve el CodeID</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No se encontró CodeID para id </span><span class="si">{</span><span class="n">codeid_id</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error al obtener el verdadero CodeID: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+</div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2025, Diego Parrilla Calderón &amp; Joaquín Ordieres-Meré.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

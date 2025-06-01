@@ -1,0 +1,386 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="es" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>msCodeID.codeid_processor &mdash; documentación de MS_Activity_Movement - 00.00.02</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=fd3f3429" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5bd19b6b"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/translations.js?v=d190bf04"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../../genindex.html" />
+    <link rel="search" title="Búsqueda" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            MS_Activity_Movement
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Buscar documentos" aria-label="Buscar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">DPC_2024</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">MS_Activity_Movement</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Código de módulo</a></li>
+      <li class="breadcrumb-item active">msCodeID.codeid_processor</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Código fuente para msCodeID.codeid_processor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">msTools.data_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">msTools.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActivityLeg</span><span class="p">,</span> <span class="n">ActivityAll</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">msGait.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActivitySegment</span>
+
+<div class="viewcode-block" id="CodeIDProcessor">
+<a class="viewcode-back" href="../../msCodeID.html#msCodeID.codeid_processor.CodeIDProcessor">[documentos]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CodeIDProcessor</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_manager</span><span class="p">:</span> <span class="n">DataManager</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inicializa el procesador de CodeIDs.</span>
+
+<span class="sd">        :param data_manager: Objeto DataManager para interacciones con PostgreSQL.</span>
+<span class="sd">        :type data_manager: object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_manager</span> <span class="o">=</span> <span class="n">data_manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">influx_client</span> <span class="o">=</span> <span class="n">data_manager</span><span class="o">.</span><span class="n">get_influx_client</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bucket</span> <span class="o">=</span> <span class="n">data_manager</span><span class="o">.</span><span class="n">bucket</span>
+
+<div class="viewcode-block" id="CodeIDProcessor.fetch_codeid_data">
+<a class="viewcode-back" href="../../msCodeID.html#msCodeID.codeid_processor.CodeIDProcessor.fetch_codeid_data">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_codeid_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">codeid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start_datetime</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">end_datetime</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtiene datos de InfluxDB asociados a un CodeID específico.</span>
+
+<span class="sd">        :param codeid: Identificador único del CodeID.</span>
+<span class="sd">        :type codeid: str</span>
+<span class="sd">        :param start_datetime: Inicio del rango de tiempo.</span>
+<span class="sd">        :type start_datetime: str</span>
+<span class="sd">        :param end_datetime: Fin del rango de tiempo.</span>
+<span class="sd">        :type end_datetime: str</span>
+<span class="sd">        :return: DataFrame con los datos asociados.</span>
+<span class="sd">        :rtype: pd.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Verificar si las fechas ya tienen información de zona horaria</span>
+        <span class="k">if</span> <span class="n">start_datetime</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">start_datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">start_datetime</span><span class="p">)</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">start_datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">start_datetime</span><span class="p">)</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">end_datetime</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">end_datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">end_datetime</span><span class="p">)</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">end_datetime</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">end_datetime</span><span class="p">)</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Convertir las fechas a UTC y formato ISO 8601</span>
+        <span class="n">start_datetime</span> <span class="o">=</span> <span class="n">start_datetime</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;+00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;Z&quot;</span><span class="p">)</span>
+        <span class="n">end_datetime</span> <span class="o">=</span> <span class="n">end_datetime</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;+00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;Z&quot;</span><span class="p">)</span>
+        
+        <span class="n">query_api</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">influx_client</span><span class="o">.</span><span class="n">query_api</span><span class="p">()</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        from(bucket: &quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="si">}</span><span class="s1">&quot;)</span>
+<span class="s1">            |&gt; range(start: </span><span class="si">{</span><span class="n">start_datetime</span><span class="si">}</span><span class="s1">, stop: </span><span class="si">{</span><span class="n">end_datetime</span><span class="si">}</span><span class="s1">)</span>
+<span class="s1">            |&gt; filter(fn: (r) =&gt; r[&quot;CodeID&quot;] == &quot;</span><span class="si">{</span><span class="n">codeid</span><span class="si">}</span><span class="s1">&quot; and r[&quot;_field&quot;] == &quot;Ax&quot;)</span>
+<span class="s1">            |&gt; aggregateWindow(every: 1m, fn: count, createEmpty: false)</span>
+<span class="s1">            |&gt; keep(columns: [&quot;_time&quot;, &quot;CodeID&quot;, &quot;_field&quot;, &quot;_value&quot;, &quot;Foot&quot;, &quot;lat&quot;, &quot;lng&quot;, &quot;mac&quot;, &quot;DeviceName&quot;])</span>
+<span class="s1">        &#39;&#39;&#39;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">query_api</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">org</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data_manager</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;influxdb&#39;</span><span class="p">][</span><span class="s1">&#39;org&#39;</span><span class="p">],</span> <span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">record</span><span class="o">.</span><span class="n">values</span> <span class="k">for</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">result</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">records</span><span class="p">]</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;_time&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No se encontraron datos para CodeID </span><span class="si">{</span><span class="n">codeid</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Datos recuperados para CodeID </span><span class="si">{</span><span class="n">codeid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span><span class="si">}</span><span class="s2"> filas.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">df</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error al consultar datos de InfluxDB para CodeID </span><span class="si">{</span><span class="n">codeid</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="CodeIDProcessor.identify_activity_segments">
+<a class="viewcode-back" href="../../msCodeID.html#msCodeID.codeid_processor.CodeIDProcessor.identify_activity_segments">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">identify_activity_segments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">threshold_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">70</span><span class="p">,</span> \
+                    <span class="n">foot</span><span class="p">:</span><span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;Left&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Identifica segmentos contiguos de datos basados en un umbral de tiempo.</span>
+
+<span class="sd">        :param df: DataFrame con datos filtrados por CodeID.</span>
+<span class="sd">        :type df: pd.DataFrame</span>
+<span class="sd">        :param threshold_seconds: Umbral en segundos para identificar saltos.</span>
+<span class="sd">        :type threshold_seconds: float</span>
+<span class="sd">        :param foot: Left o Right, la pierna de interés.</span>
+<span class="sd">        :type foot: str</span>
+<span class="sd">        :return: DataFrame con columnas [&#39;codeid_id&#39;, &#39;foot&#39;, &#39;device_name&#39;, &#39;mac&#39;, &#39;start_time&#39;, &#39;end_time&#39;].</span>
+<span class="sd">        :rtype: pd.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">grouping</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">threshold_seconds</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Crea los grupos contiguos de _time y DeviceName</span>
+
+<span class="sd">            Args:</span>
+<span class="sd">                df (pd.DataFrame): Resultado de Numero de registros por segundo de DeviceName</span>
+<span class="sd">                delta (int): Número de segundos que define los grupos</span>
+
+<span class="sd">            Returns:</span>
+<span class="sd">                pd.DataFrame: Estructura con las marcas de tiempo desde / hasta de cada grupo</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">_time_diff</span><span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;_time&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">())</span>
+
+            <span class="c1"># Identificar los grupos donde la diferencia es mayor a 80 segundos o el &#39;DeviceName&#39; cambia</span>
+            <span class="n">df</span><span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">group</span> <span class="o">=</span> <span class="p">((</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;_time_diff&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">threshold_seconds</span><span class="p">)</span> <span class="o">|</span> \
+                            <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;DeviceName&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;DeviceName&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">()))</span><span class="o">.</span><span class="n">cumsum</span><span class="p">())</span>
+
+            <span class="c1"># Generar el nuevo dataframe con los grupos y los valores &#39;time_from&#39; y &#39;time_until&#39;</span>
+            <span class="n">result_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+                <span class="n">time_from</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">&#39;_time&#39;</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">&#39;first&#39;</span><span class="p">),</span>
+                <span class="n">time_until</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">&#39;_time&#39;</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">&#39;last&#39;</span><span class="p">),</span>
+                <span class="n">CodeID</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">&#39;CodeID&#39;</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">&#39;first&#39;</span><span class="p">),</span>
+                <span class="n">DeviceName</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">&#39;DeviceName&#39;</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">&#39;first&#39;</span><span class="p">),</span>
+                <span class="n">Foot</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">&#39;Foot&#39;</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">&#39;first&#39;</span><span class="p">),</span>
+                <span class="n">total_value</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">&#39;_value&#39;</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">),</span>
+                <span class="n">mac</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">&#39;mac&#39;</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">&#39;first&#39;</span><span class="p">)</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Eliminar la columna de diferencias temporales y el identificador de grupo del dataframe original</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;_time_diff&#39;</span><span class="p">,</span> <span class="s1">&#39;group&#39;</span><span class="p">])</span>            
+            <span class="k">return</span><span class="p">(</span><span class="n">result_df</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No se encontraron datos en el DataFrame proporcionado.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;codeid_id&quot;</span><span class="p">,</span> <span class="s2">&quot;foot&quot;</span><span class="p">,</span> <span class="s2">&quot;device_name&quot;</span><span class="p">,</span> <span class="s2">&quot;mac&quot;</span><span class="p">,</span> <span class="s2">&quot;start_time&quot;</span><span class="p">,</span> <span class="s2">&quot;end_time&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Verificar si &#39;_time&#39; ya tiene zona horaria antes de localización</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_datetime64_any_dtype</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;_time&quot;</span><span class="p">]):</span>
+            <span class="n">df</span><span class="p">[</span><span class="s2">&quot;_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;_time&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;_time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">tz</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">df</span><span class="p">[</span><span class="s2">&quot;_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;_time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s2">&quot;Europe/Madrid&quot;</span><span class="p">)</span>
+            <span class="c1"># df[&quot;_time&quot;] = df[&quot;_time&quot;].dt.tz_convert(&quot;UTC&quot;)</span>
+
+        <span class="n">df</span>  <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;result&#39;</span><span class="p">,</span><span class="s1">&#39;table&#39;</span><span class="p">,</span><span class="s1">&#39;_field&#39;</span><span class="p">,</span><span class="s1">&#39;lng&#39;</span><span class="p">,</span><span class="s1">&#39;lat&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">&quot;_time&quot;</span><span class="p">)</span>
+        <span class="n">dfF</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;Foot&#39;</span><span class="p">]</span><span class="o">==</span><span class="n">foot</span><span class="p">,:]</span>
+        
+        <span class="n">dfFg</span><span class="o">=</span> <span class="n">grouping</span><span class="p">(</span><span class="n">dfF</span><span class="p">,</span> <span class="n">threshold_seconds</span><span class="p">)</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">dfFg</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="CodeIDProcessor.inter_segs">
+<a class="viewcode-back" href="../../msCodeID.html#msCodeID.codeid_processor.CodeIDProcessor.inter_segs">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">inter_segs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sg1</span><span class="p">:</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span><span class="n">sg2</span><span class="p">:</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calcula la intersección de registros from/until</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sg1 (pd.DataFrame): DataFrame de pie Derecho</span>
+<span class="sd">            sg2 (pd.DataFrame): DataFrame de pie Izquierdo</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: DataFrame con las intersecciones</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">is_intersection</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">row</span><span class="p">[</span><span class="s1">&#39;time_from_1&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;time_until_2&#39;</span><span class="p">]</span> <span class="ow">and</span>
+                <span class="n">row</span><span class="p">[</span><span class="s1">&#39;time_from_2&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;time_until_1&#39;</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="c1"># Calcular los límites reales de la intersección</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">calculate_intersection</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">({</span>
+                <span class="s1">&#39;time_from&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;time_from_1&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;time_from_2&#39;</span><span class="p">]),</span>
+                <span class="s1">&#39;time_until&#39;</span><span class="p">:</span> <span class="nb">min</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;time_until_1&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;time_until_2&#39;</span><span class="p">])</span>
+            <span class="p">})</span>        
+        <span class="n">sg1</span> <span class="o">=</span> <span class="n">sg1</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;index&#39;</span><span class="p">:</span><span class="s1">&#39;R1_id&#39;</span><span class="p">})</span>
+        <span class="n">sg2</span> <span class="o">=</span> <span class="n">sg2</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;index&#39;</span><span class="p">:</span><span class="s1">&#39;R2_id&#39;</span><span class="p">})</span>
+        <span class="c1"># Realizar un producto cartesiano entre los DataFrames</span>
+        <span class="n">cross_join</span> <span class="o">=</span> <span class="n">sg1</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">sg2</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;cross&#39;</span><span class="p">,</span> <span class="n">suffixes</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;_1&#39;</span><span class="p">,</span> <span class="s1">&#39;_2&#39;</span><span class="p">))</span>        
+        <span class="c1"># Filtrar las filas donde los segmentos de tiempo se solapan</span>
+        <span class="n">cross_join</span><span class="p">[</span><span class="s1">&#39;intersects&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cross_join</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">is_intersection</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># Filtrar solo las filas con intersección</span>
+        <span class="n">intersections</span> <span class="o">=</span> <span class="n">cross_join</span><span class="p">[</span><span class="n">cross_join</span><span class="p">[</span><span class="s1">&#39;intersects&#39;</span><span class="p">]]</span>
+        <span class="c1"># Calcular los valores de la intersección para las columnas time_from y time_until</span>
+        <span class="n">intersections</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,[</span><span class="s1">&#39;time_from&#39;</span><span class="p">,</span> <span class="s1">&#39;time_until&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">intersections</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span> \
+                            <span class="n">calculate_intersection</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># Crear el DataFrame con las columnas solicitadas</span>
+        <span class="k">if</span> <span class="n">intersections</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">result_df</span> <span class="o">=</span> <span class="n">intersections</span><span class="p">[[</span><span class="s1">&#39;time_from&#39;</span><span class="p">,</span> <span class="s1">&#39;time_until&#39;</span><span class="p">,</span> <span class="s1">&#39;R1_id&#39;</span><span class="p">,</span> <span class="s1">&#39;R2_id&#39;</span><span class="p">,</span> \
+                    <span class="s1">&#39;codeid_id_1&#39;</span><span class="p">,</span><span class="s1">&#39;codeid_id_2&#39;</span><span class="p">]]</span>
+            <span class="n">result_df</span> <span class="o">=</span> <span class="n">result_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result_df</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="CodeIDProcessor.merge_activity_legs_to_all">
+<a class="viewcode-back" href="../../msCodeID.html#msCodeID.codeid_processor.CodeIDProcessor.merge_activity_legs_to_all">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">merge_activity_legs_to_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">act_segR</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">act_segL</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> \
+                                    <span class="n">inter</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Combina las ventanas de actividad de ambas piernas (derecha e izquierda) desde activity_leg </span>
+<span class="sd">        para identificar períodos de actividad sincronizada y los almacena en activity_all.</span>
+
+<span class="sd">        :param act_segR: DataFrame de la actividad del pie Derecho.</span>
+<span class="sd">        :type act_segR: pd.DataFrame</span>
+<span class="sd">        :param act_segL: DataFrame de la actividad del pie Izquierdo.</span>
+<span class="sd">        :type act_segL: pd.DataFrame</span>
+<span class="sd">        :param inter: DataFrame con la intersección entre act_segR y act_segL</span>
+<span class="sd">        :type inter: pd.DataFrame</span>
+<span class="sd">        :return: DataFrame con toda la información integrada para inyectar en PostGresQL</span>
+<span class="sd">        :rtype: pd.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Función para convertir el campo mac al formato deseado</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">format_mac</span><span class="p">(</span><span class="n">address</span><span class="p">):</span>
+            <span class="c1"># Extraer el texto después del último &#39;-&#39;</span>
+            <span class="n">hex_part</span> <span class="o">=</span> <span class="n">address</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="c1"># Insertar &#39;:&#39; cada dos caracteres</span>
+            <span class="n">formatted_mac</span> <span class="o">=</span> <span class="s1">&#39;:&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">hex_part</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hex_part</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">formatted_mac</span>
+        <span class="c1"># Combinar res con activity_segR y activity_segL usando los IDs R1_id y R2_id</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">inter</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">act_segR</span><span class="p">[[</span><span class="s1">&#39;CodeID&#39;</span><span class="p">,</span> <span class="s1">&#39;device_name&#39;</span><span class="p">,</span> <span class="s1">&#39;foot&#39;</span><span class="p">,</span> \
+                                <span class="s1">&#39;mac&#39;</span><span class="p">,</span><span class="s1">&#39;codeleg_id&#39;</span><span class="p">]],</span>
+                        <span class="n">left_on</span><span class="o">=</span><span class="s1">&#39;R1_id&#39;</span><span class="p">,</span>
+                        <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">suffixes</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;_R&#39;</span><span class="p">))</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">act_segL</span><span class="p">[[</span><span class="s1">&#39;CodeID&#39;</span><span class="p">,</span> <span class="s1">&#39;device_name&#39;</span><span class="p">,</span> <span class="s1">&#39;foot&#39;</span><span class="p">,</span> \
+                                <span class="s1">&#39;mac&#39;</span><span class="p">,</span><span class="s1">&#39;codeleg_id&#39;</span><span class="p">]],</span>
+                            <span class="n">left_on</span><span class="o">=</span><span class="s1">&#39;R2_id&#39;</span><span class="p">,</span>
+                            <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">suffixes</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;_R&#39;</span><span class="p">,</span> <span class="s1">&#39;_L&#39;</span><span class="p">))</span>
+
+        <span class="c1"># Seleccionamos las columnas relevantes</span>
+        <span class="n">final_result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[[</span>
+            <span class="s1">&#39;time_from&#39;</span><span class="p">,</span> <span class="s1">&#39;time_until&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;CodeID_R&#39;</span><span class="p">,</span> <span class="s1">&#39;device_name_R&#39;</span><span class="p">,</span> <span class="s1">&#39;foot_R&#39;</span><span class="p">,</span> <span class="s1">&#39;mac_R&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;CodeID_L&#39;</span><span class="p">,</span> <span class="s1">&#39;device_name_L&#39;</span><span class="p">,</span> <span class="s1">&#39;foot_L&#39;</span><span class="p">,</span> <span class="s1">&#39;mac_L&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;codeid_id_1&#39;</span><span class="p">,</span><span class="s1">&#39;codeid_id_2&#39;</span><span class="p">,</span> <span class="s1">&#39;codeleg_id_R&#39;</span><span class="p">,</span><span class="s1">&#39;codeleg_id_L&#39;</span>
+        <span class="p">]]</span>
+        <span class="c1"># Aplicar la función a los campos de mac en el DataFrame</span>
+        <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;mac_R&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">final_result</span> <span class="o">=</span> <span class="n">final_result</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">final_result</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span><span class="s1">&#39;mac_R&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;mac_R&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">format_mac</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;mac_L&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">final_result</span> <span class="o">=</span> <span class="n">final_result</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">final_result</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span><span class="s1">&#39;mac_L&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;mac_L&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">format_mac</span><span class="p">)</span>
+        <span class="n">final_result</span> <span class="o">=</span> <span class="n">final_result</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">final_result</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span><span class="s1">&#39;is_effective&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;duration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;time_until&#39;</span><span class="p">]</span> <span class="o">-</span> \
+                                    <span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;time_from&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span>
+        <span class="c1"># Crear la nueva columna &#39;macs&#39; como una lista con los valores de &#39;mac_L&#39; y &#39;mac_R&#39;</span>
+        <span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;macs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_result</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;mac_L&#39;</span><span class="p">],</span> \
+                                <span class="n">row</span><span class="p">[</span><span class="s1">&#39;mac_R&#39;</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;codeid_ids&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_result</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;codeid_id_2&#39;</span><span class="p">],</span> \
+                                <span class="n">row</span><span class="p">[</span><span class="s1">&#39;codeid_id_1&#39;</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;codeleg_ids&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_result</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;codeleg_id_L&#39;</span><span class="p">],</span> \
+                                <span class="n">row</span><span class="p">[</span><span class="s1">&#39;codeleg_id_R&#39;</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;device_names&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_result</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="p">[</span> \
+                                <span class="n">row</span><span class="p">[</span><span class="s1">&#39;device_name_L&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;device_name_R&#39;</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">final_result</span><span class="p">[</span><span class="s1">&#39;active_legs&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_result</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;foot_L&#39;</span><span class="p">],</span> \
+                                <span class="n">row</span><span class="p">[</span><span class="s1">&#39;foot_R&#39;</span><span class="p">]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">final_result</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;time_from&#39;</span><span class="p">:</span> <span class="s1">&#39;start_time&#39;</span><span class="p">,</span> \
+                                     <span class="s1">&#39;time_until&#39;</span><span class="p">:</span> <span class="s1">&#39;end_time&#39;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">final_result</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;CodeID_R&#39;</span><span class="p">,</span> <span class="s1">&#39;device_name_R&#39;</span><span class="p">,</span> <span class="s1">&#39;foot_R&#39;</span><span class="p">,</span> \
+                <span class="s1">&#39;mac_R&#39;</span><span class="p">,</span> <span class="s1">&#39;CodeID_L&#39;</span><span class="p">,</span> <span class="s1">&#39;device_name_L&#39;</span><span class="p">,</span> <span class="s1">&#39;foot_L&#39;</span><span class="p">,</span> <span class="s1">&#39;mac_L&#39;</span><span class="p">,</span> \
+                <span class="s1">&#39;codeleg_id_L&#39;</span><span class="p">,</span><span class="s1">&#39;codeleg_id_R&#39;</span><span class="p">],</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">final_result</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CodeIDProcessor.save_to_postgresql">
+<a class="viewcode-back" href="../../msCodeID.html#msCodeID.codeid_processor.CodeIDProcessor.save_to_postgresql">[documentos]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_to_postgresql</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span><span class="o">-&gt;</span><span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Guarda datos procesados en una tabla de PostgreSQL.</span>
+
+<span class="sd">        :param table_name: Nombre de la tabla.</span>
+<span class="sd">        :type table_name: str</span>
+<span class="sd">        :param df: DataFrame con los datos a guardar.</span>
+<span class="sd">        :type df: pd.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No hay datos para guardar en </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_manager</span><span class="o">.</span><span class="n">store_data</span><span class="p">(</span><span class="n">table_name</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error al guardar los datos en la tabla </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+</div>
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Derechos de autor 2025, Diego Parrilla Calderón &amp; Joaquín Ordieres-Meré.</p>
+  </div>
+
+  Compilado con <a href="https://www.sphinx-doc.org/">Sphinx</a> usando un
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    proporcionado por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

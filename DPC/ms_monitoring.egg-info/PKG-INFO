@@ -1,0 +1,22 @@
+Metadata-Version: 2.4
+Name: ms_monitoring
+Version: 0.1.0
+Summary: Basic Processing Wearable Sensoria + HealthyWear
+Author-email: Diego Parrilla Calderon <diego.parrilla.calderon@alumnos.upm.es>
+Project-URL: homepage, https://github.com/MultipleSclerosisMonitoring/DPC_2024
+Project-URL: issues, https://github.com/MultipleSclerosisMonitoring/DPC_2024/issues
+Keywords: SclerosisMonitoring,msTools,python,msCodeID
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: <4.0,>=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: psycopg2>=2.9.5
+Requires-Dist: influxdb-client>=1.35.0
+Requires-Dist: PyYAML>=6.0.1
+Dynamic: license-file
+
+# DPC_2024
+TFM Diego Parrilla Calderón
